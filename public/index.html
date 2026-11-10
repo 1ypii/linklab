@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>linklab</title>
+<meta name="description" content="wireless headset audio link simulator you can hear">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <b>linklab</b>
+    <span>wireless headset audio link simulator</span>
+  </div>
+  <div class="transport">
+    <select id="source">
+      <option value="music">music loop</option>
+      <option value="tone">test tone</option>
+      <option value="file">your file</option>
+    </select>
+    <input type="file" id="file" accept="audio/*" hidden>
+    <label class="vol">vol <input type="range" id="vol" min="0" max="1" step="0.01" value="0.4"></label>
+    <button id="play" class="primary">play</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <section>
+      <h2>link</h2>
+      <div class="modes" id="modes">
+        <button data-mode="bt">bluetooth</button>
+        <button data-mode="le">le audio</button>
+        <button data-mode="dongle">dongle</button>
+      </div>
+      <p class="hint" id="modeHint"></p>
+      <label class="ctl">
+        <span>codec</span>
+        <select id="codec"></select>
+      </label>
+      <label class="check"><input type="checkbox" id="call"> mic on call mode <span class="hint" id="callHint"></span></label>
+    </section>
+
+    <section>
+      <h2>connection</h2>
+      <div class="conn"><i id="connDot"></i><span id="connText">headset off</span></div>
+      <div class="row">
+        <button id="power">power on</button>
+        <button id="pair" disabled>pair</button>
+        <button id="forget" disabled>forget</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>scenarios</h2>
+      <div class="scenes" id="scenes">
+        <button data-scene="quiet">quiet room</button>
+        <button data-scene="office">busy office</button>
+        <button data-scene="apartment">crowded apartment</button>
+        <button data-scene="microwave">microwave on</button>
+        <button data-scene="walk">walk away</button>
+        <button data-scene="clock">bad clock</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>radio</h2>
+      <label class="ctl">
+        <span>interference from</span>
+        <select id="noise">
+          <option value="wifi1">one wifi network</option>
+          <option value="wifi3">three wifi networks</option>
+          <option value="microwave">microwave oven</option>
+        </select>
+      </label>
+      <label class="ctl">
+        <span>interference <em id="interferenceVal"></em></span>
+        <input type="range" id="interference" min="0" max="1" step="0.01" value="0">
+      </label>
+      <p class="hint">how busy the interferer is</p>
+      <label class="ctl">
+        <span>distance <em id="distanceVal"></em></span>
+        <input type="range" id="distance" min="1" max="20" step="0.5" value="2">
+      </label>
+      <p class="hint">past about 6 m the signal starts failing more</p>
+      <label class="check"><input type="checkbox" id="afh" checked> adaptive hopping <span class="hint">learn which channels are bad and stop using them</span></label>
+    </section>
+
+    <section>
+      <h2>receiver</h2>
+      <label class="ctl">
+        <span>buffer target <em id="targetVal"></em></span>
+        <input type="range" id="target" min="5" max="300" step="1" value="150">
+      </label>
+      <p class="hint">bigger buffer rides out bad radio but adds delay</p>
+      <label class="ctl">
+        <span>clock drift <em id="ppmVal"></em></span>
+        <input type="range" id="ppm" min="-10000" max="10000" step="100" value="0">
+      </label>
+      <p class="hint">the headset dac clock running faster or slower than the sender</p>
+      <label class="check"><input type="checkbox" id="asrc" checked> drift correction <span class="hint">resample to hold the buffer at target</span></label>
+      <label class="check"><input type="checkbox" id="plc" checked> loss concealment <span class="hint">replay old audio instead of silence</span></label>
+      <label class="check"><input type="checkbox" id="bypass"> bypass link <span class="hint">hear the clean source</span></label>
+    </section>
+  </aside>
+
+  <div class="panel">
+    <div class="tiles">
+      <div class="tile"><span>latency</span><b id="lat">0</b><small>ms end to end</small></div>
+      <div class="tile"><span>buffer</span><b id="fill">0</b><small>ms queued</small></div>
+      <div class="tile"><span>glitches</span><b id="glitch">0</b><small>frames concealed or skipped</small></div>
+      <div class="tile"><span>packet loss</span><b id="loss">0</b><small>% last second</small></div>
+      <div class="tile"><span>retries</span><b id="retry">0</b><small>per second</small></div>
+      <div class="tile"><span>clock fix</span><b id="fix">0</b><small>ppm applied</small></div>
+    </div>
+
+    <div class="chart">
+      <div class="chartHead">
+        <h3>where the delay comes from</h3>
+        <div class="legend">
+          <span><i class="sw c1"></i>framing <b id="bFrameV">0 ms</b></span>
+          <span><i class="sw c2"></i>radio and retries <b id="bRadioV">0 ms</b></span>
+          <span><i class="sw c3"></i>buffer wait <b id="bBufV">0 ms</b></span>
+        </div>
+      </div>
+      <div class="budget"><i class="c1" id="bFrame"></i><i class="c2" id="bRadio"></i><i class="c3" id="bBuf"></i></div>
+    </div>
+
+    <div class="chart">
+      <div class="chartHead">
+        <h3>air packets last 2 s</h3>
+        <div class="legend">
+          <span><i class="sw good"></i>first try</span>
+          <span><i class="sw warn"></i>retried</span>
+          <span><i class="sw bad"></i>lost</span>
+        </div>
+      </div>
+      <canvas id="air"></canvas>
+      <p class="hint">each bar is one audio packet, taller means more transmit attempts</p>
+    </div>
+
+    <div class="chart">
+      <div class="chartHead">
+        <h3>2.4 ghz band <span id="chCount"></span></h3>
+        <div class="legend">
+          <span><i class="sw line"></i>failed attempts per channel</span>
+          <span><i class="sw off"></i>channel avoided</span>
+          <span><i class="sw band"></i>interferer</span>
+        </div>
+      </div>
+      <canvas id="spec"></canvas>
+      <div class="tip" id="specTip"></div>
+    </div>
+
+    <div class="chart">
+      <div class="chartHead">
+        <h3>buffer level last 10 s</h3>
+        <div class="legend">
+          <span><i class="sw line"></i>buffer ms</span>
+          <span><i class="sw dash"></i>target</span>
+          <span><i class="sw bad"></i>underrun or overflow</span>
+        </div>
+      </div>
+      <canvas id="buf"></canvas>
+      <div class="tip" id="tip"></div>
+    </div>
+
+    <div class="chart">
+      <div class="chartHead"><h3>event log</h3></div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

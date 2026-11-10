@@ -1,0 +1,8 @@
+{
+  "name": "linklab",
+  "account_id": "7eefd22f30e5c1706b004911d075944b",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./public"
+  }
+}
